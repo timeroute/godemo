@@ -224,7 +224,8 @@ godemo/
 │   ├── auth.go         # 认证服务
 │   └── geoip.go        # GeoIP 服务
 ├── middleware/          # 中间件
-│   ├── auth.go         # 认证和权限中间件
+│   ├── auth.go         # JWT 认证中间件
+│   ├── permission.go   # 权限控制中间件
 │   ├── cors.go         # CORS 中间件
 │   └── logging.go      # 日志中间件
 ├── database/            # 数据库
