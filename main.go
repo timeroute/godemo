@@ -6,6 +6,7 @@ import (
 	"godemo/docs"
 	"godemo/handler"
 	"godemo/middleware"
+	"godemo/service"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -33,10 +34,18 @@ func main() {
 	// 初始化数据库
 	database.InitDB()
 
-	r := gin.Default()
+	// 初始化 GeoIP（可选）
+	if err := service.InitGeoIP(); err != nil {
+		log.Printf("⚠️  GeoIP 初始化失败: %v", err)
+	}
+	defer service.CloseGeoIP()
 
-	// CORS 中间件（必须在路由之前）
-	r.Use(middleware.CORSMiddleware())
+	r := gin.New() // 使用 gin.New() 而不是 gin.Default()，手动添加中间件
+
+	// 添加中间件（顺序很重要）
+	r.Use(gin.Recovery())                 // 恢复 panic
+	r.Use(middleware.LoggingMiddleware()) // 日志记录
+	r.Use(middleware.CORSMiddleware())    // CORS
 
 	docs.SwaggerInfo.BasePath = "/"
 
@@ -68,6 +77,14 @@ func main() {
 
 		// 权限管理
 		api.GET("/permissions", handler.ListPermissions)
+
+		// 日志管理
+		logs := api.Group("/logs")
+		{
+			logs.GET("", handler.ListRequestLogs)
+			logs.GET("/statistics", handler.GetLogStatistics)
+			logs.GET("/:id", handler.GetRequestLog)
+		}
 	}
 
 	// Swagger文档

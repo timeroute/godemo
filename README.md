@@ -10,6 +10,9 @@
 - ✅ JWT 认证
 - ✅ 基于角色的权限控制
 - ✅ CORS 跨域支持（可配置）
+- ✅ 请求日志记录
+- ✅ IP 地理位置解析
+- ✅ 日志查询和统计
 - ✅ 环境变量配置
 - ✅ SQLite3 数据库
 - ✅ Swagger API 文档
@@ -23,6 +26,7 @@
 - SQLite3
 - JWT (golang-jwt/jwt)
 - CORS (gin-contrib/cors)
+- IP2Region (lionsoul2014/ip2region)
 - Swagger (swaggo)
 - godotenv (环境变量管理)
 
@@ -62,7 +66,28 @@ CORS_ALLOW_ORIGINS=*
 - [配置管理指南](CONFIG.md)
 - [CORS 配置指南](CORS.md)
 
-### 3. 运行服务
+### 3. （可选）配置 IP2Region 地理位置功能
+
+如果需要 IP 地理位置解析功能，下载 IP2Region 数据库（免费，无需注册）：
+
+```bash
+curl -L -o ip2region.xdb https://github.com/lionsoul2014/ip2region/raw/master/data/ip2region.xdb
+```
+
+然后在 `.env` 文件中配置：
+
+```bash
+GEOIP_DB_PATH=./ip2region.xdb
+```
+
+IP2Region 特点：
+
+- 完全免费，无需注册
+- 数据库文件小（约 11MB）
+- 查询速度快（微秒级）
+- 支持国内 IP 精确到市级
+
+### 4. 运行服务
 
 ```bash
 go run main.go
@@ -107,6 +132,37 @@ go run main.go
 ### 权限管理
 
 - `GET /api/permissions` - 获取权限列表
+
+### 日志管理
+
+- `GET /api/logs` - 获取请求日志列表（支持分页和筛选）
+- `GET /api/logs/:id` - 获取日志详情
+- `GET /api/logs/statistics` - 获取日志统计信息
+
+#### 日志查询参数
+
+支持的筛选参数：
+
+- `page`: 页码（默认 1）
+- `page_size`: 每页数量（默认 20，最大 100）
+- `method`: HTTP 方法（GET, POST, PUT, DELETE）
+- `status`: 状态码（200, 404, 500 等）
+- `ip`: 客户端 IP
+- `username`: 用户名
+- `country`: 国家
+- `city`: 城市
+
+示例：
+
+```bash
+# 获取状态码为 500 的错误日志
+curl -X GET "http://localhost:8080/api/logs?status=500" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# 获取来自中国的请求
+curl -X GET "http://localhost:8080/api/logs?country=中国" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
 
 ## 使用示例
 
@@ -156,21 +212,26 @@ godemo/
 ├── config/              # 配置管理
 │   └── config.go       # 配置加载
 ├── models/              # 数据模型
-│   └── user.go         # 用户、角色、权限模型
+│   ├── user.go         # 用户、角色、权限模型
+│   └── request_log.go  # 请求日志模型
 ├── handler/             # 处理器
 │   ├── auth.go         # 认证处理器
 │   ├── user.go         # 用户处理器
 │   ├── role.go         # 角色处理器
-│   └── permission.go   # 权限处理器
+│   ├── permission.go   # 权限处理器
+│   └── log.go          # 日志处理器
 ├── service/             # 业务逻辑
-│   └── auth.go         # 认证服务
+│   ├── auth.go         # 认证服务
+│   └── geoip.go        # GeoIP 服务
 ├── middleware/          # 中间件
 │   ├── auth.go         # 认证和权限中间件
-│   └── cors.go         # CORS 中间件
+│   ├── cors.go         # CORS 中间件
+│   └── logging.go      # 日志中间件
 ├── database/            # 数据库
 │   └── database.go     # 数据库初始化
 ├── docs/                # Swagger 文档
 ├── .env.example         # 环境变量示例
+├── ip2region.xdb       # IP2Region 数据库（可选，需自行下载）
 └── godemo.db           # SQLite 数据库文件（运行后生成）
 ```
 
@@ -187,6 +248,45 @@ godemo/
 - `role:edit` - 编辑角色
 - `role:delete` - 删除角色
 
+## 日志配置
+
+### 环境变量
+
+```bash
+LOG_SAVE_TO_DB=true          # 是否保存到数据库
+LOG_TO_CONSOLE=true          # 是否输出到控制台
+LOG_REQUEST_BODY=false       # 是否记录请求体（谨慎开启）
+LOG_RESPONSE_BODY=false      # 是否记录响应体（谨慎开启）
+LOG_MAX_BODY_SIZE=1024       # 请求/响应体最大记录长度（字节）
+GEOIP_DB_PATH=./ip2region.xdb  # IP2Region 数据库路径
+```
+
+### 日志功能
+
+- ✅ 自动记录所有 HTTP 请求
+- ✅ IP 地理位置解析（国家、城市）
+- ✅ 用户信息关联
+- ✅ 异步数据库存储（不阻塞请求）
+- ✅ 控制台彩色日志输出
+- ✅ 支持请求/响应体记录（可配置）
+
+### 性能优化
+
+- 日志写入数据库是异步的，不影响请求响应速度
+- IP2Region 使用内存搜索，查询速度微秒级
+- 数据库表已添加索引优化查询性能
+- 建议定期清理旧日志（30天以上）
+
+### 安全建议
+
+⚠️ 不要记录敏感信息：
+
+- 登录请求的密码
+- JWT Token
+- 个人隐私数据
+
+建议在生产环境关闭 `LOG_REQUEST_BODY` 和 `LOG_RESPONSE_BODY`。
+
 ## 注意事项
 
 1. 生产环境请修改 `JWT_SECRET` 环境变量（详见 [CONFIG.md](CONFIG.md)）
@@ -194,6 +294,7 @@ godemo/
 3. 默认管理员账户（ID=1）不能被删除
 4. 所有删除操作都是软删除，数据不会真正从数据库中移除
 5. Token 默认有效期为 24 小时，可通过 `JWT_EXPIRE_HOUR` 环境变量配置
+6. 日志记录默认开启，建议定期清理旧日志数据
 
 ## 开发
 
@@ -208,6 +309,21 @@ swag init
 ```bash
 go build -o godemo
 ```
+
+### 清理旧日志
+
+```bash
+# SQLite 清理 30 天前的日志
+sqlite3 godemo.db "DELETE FROM request_logs WHERE created_at < datetime('now', '-30 days');"
+```
+
+## 参考资料
+
+- [配置管理指南](CONFIG.md) - 详细的环境变量配置说明
+- [CORS 配置指南](CORS.md) - 跨域资源共享配置
+- [Gin 框架文档](https://gin-gonic.com/)
+- [GORM 文档](https://gorm.io/)
+- [IP2Region](https://github.com/lionsoul2014/ip2region) - IP 地理位置库
 
 ## License
 

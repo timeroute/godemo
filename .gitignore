@@ -1,6 +1,9 @@
 # 环境变量文件
 .env
 
+# IP2Region 数据库
+*.xdb
+
 # 数据库文件
 *.db
 *.db-shm

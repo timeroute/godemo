@@ -13,6 +13,7 @@ type Config struct {
 	Database DatabaseConfig
 	JWT      JWTConfig
 	CORS     CORSConfig
+	Logging  LoggingConfig
 }
 
 type ServerConfig struct {
@@ -37,6 +38,15 @@ type CORSConfig struct {
 	ExposeHeaders    []string
 	AllowCredentials bool
 	MaxAge           int // 预检请求缓存时间（秒）
+}
+
+type LoggingConfig struct {
+	SaveToDB        bool
+	LogToConsole    bool
+	LogRequestBody  bool
+	LogResponseBody bool
+	MaxBodySize     int
+	GeoIPDBPath     string
 }
 
 var AppConfig *Config
@@ -68,6 +78,14 @@ func Load() {
 			ExposeHeaders:    getEnvAsSlice("CORS_EXPOSE_HEADERS", []string{"Content-Length"}),
 			AllowCredentials: getEnvAsBool("CORS_ALLOW_CREDENTIALS", true),
 			MaxAge:           getEnvAsInt("CORS_MAX_AGE", 43200), // 12小时
+		},
+		Logging: LoggingConfig{
+			SaveToDB:        getEnvAsBool("LOG_SAVE_TO_DB", true),
+			LogToConsole:    getEnvAsBool("LOG_TO_CONSOLE", true),
+			LogRequestBody:  getEnvAsBool("LOG_REQUEST_BODY", false),
+			LogResponseBody: getEnvAsBool("LOG_RESPONSE_BODY", false),
+			MaxBodySize:     getEnvAsInt("LOG_MAX_BODY_SIZE", 1024),
+			GeoIPDBPath:     getEnv("GEOIP_DB_PATH", ""),
 		},
 	}
 

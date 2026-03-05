@@ -22,7 +22,7 @@ func InitDB() {
 	log.Println("✅ 数据库连接成功:", config.AppConfig.Database.DSN)
 
 	// 自动迁移
-	err = DB.AutoMigrate(&models.User{}, &models.Role{}, &models.Permission{})
+	err = DB.AutoMigrate(&models.User{}, &models.Role{}, &models.Permission{}, &models.RequestLog{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
