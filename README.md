@@ -59,12 +59,12 @@ JWT_EXPIRE_HOUR=24
 
 # CORS 配置（开发环境允许所有来源）
 CORS_ALLOW_ORIGINS=*
+
+# 日志配置
+LOG_SAVE_TO_DB=true
+LOG_TO_CONSOLE=true
+GEOIP_DB_PATH=./ip2region.xdb
 ```
-
-详细配置说明：
-
-- [配置管理指南](CONFIG.md)
-- [CORS 配置指南](CORS.md)
 
 ### 3. （可选）配置 IP2Region 地理位置功能
 
@@ -248,9 +248,40 @@ godemo/
 - `role:edit` - 编辑角色
 - `role:delete` - 删除角色
 
-## 日志配置
+## 环境变量配置
 
-### 环境变量
+### 服务器配置
+
+```bash
+SERVER_PORT=8080              # 服务端口
+GIN_MODE=debug                # 运行模式: debug/release/test
+```
+
+### 数据库配置
+
+```bash
+DB_DRIVER=sqlite              # 数据库驱动
+DB_DSN=godemo.db             # 数据库文件路径
+```
+
+### JWT 配置
+
+```bash
+JWT_SECRET=your-secret-key    # JWT 签名密钥（生产环境必须修改）
+JWT_EXPIRE_HOUR=24           # Token 有效期（小时）
+```
+
+### CORS 配置
+
+```bash
+CORS_ALLOW_ORIGINS=*                              # 允许的源（生产环境指定具体域名）
+CORS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS   # 允许的方法
+CORS_ALLOW_HEADERS=Origin,Content-Type,Authorization  # 允许的请求头
+CORS_ALLOW_CREDENTIALS=true                       # 是否允许携带凭证
+CORS_MAX_AGE=43200                               # 预检请求缓存时间（秒）
+```
+
+### 日志配置
 
 ```bash
 LOG_SAVE_TO_DB=true          # 是否保存到数据库
@@ -279,22 +310,29 @@ GEOIP_DB_PATH=./ip2region.xdb  # IP2Region 数据库路径
 
 ### 安全建议
 
-⚠️ 不要记录敏感信息：
+⚠️ **不要记录敏感信息**：
 
 - 登录请求的密码
 - JWT Token
 - 个人隐私数据
 
-建议在生产环境关闭 `LOG_REQUEST_BODY` 和 `LOG_RESPONSE_BODY`。
+**生产环境建议**：
+
+- 关闭 `LOG_REQUEST_BODY` 和 `LOG_RESPONSE_BODY`
+- 设置强 JWT 密钥（至少 32 字符）
+- CORS 配置指定具体域名，不使用 `*`
+- 定期更新 IP2Region 数据库
+- 启用 HTTPS
 
 ## 注意事项
 
-1. 生产环境请修改 `JWT_SECRET` 环境变量（详见 [CONFIG.md](CONFIG.md)）
-2. 建议使用环境变量管理敏感配置
-3. 默认管理员账户（ID=1）不能被删除
-4. 所有删除操作都是软删除，数据不会真正从数据库中移除
-5. Token 默认有效期为 24 小时，可通过 `JWT_EXPIRE_HOUR` 环境变量配置
-6. 日志记录默认开启，建议定期清理旧日志数据
+1. **生产环境安全**：请修改 `JWT_SECRET` 环境变量为强密钥
+2. **敏感配置**：建议使用环境变量管理敏感配置
+3. **管理员账户**：默认管理员账户（ID=1）不能被删除
+4. **软删除**：所有删除操作都是软删除，数据不会真正从数据库中移除
+5. **Token 有效期**：默认 24 小时，可通过 `JWT_EXPIRE_HOUR` 环境变量配置
+6. **日志清理**：建议定期清理旧日志数据（30天以上）
+7. **CORS 配置**：生产环境请指定具体的允许域名，不要使用 `*`
 
 ## 开发
 
@@ -319,11 +357,11 @@ sqlite3 godemo.db "DELETE FROM request_logs WHERE created_at < datetime('now', '
 
 ## 参考资料
 
-- [配置管理指南](CONFIG.md) - 详细的环境变量配置说明
-- [CORS 配置指南](CORS.md) - 跨域资源共享配置
 - [Gin 框架文档](https://gin-gonic.com/)
 - [GORM 文档](https://gorm.io/)
 - [IP2Region](https://github.com/lionsoul2014/ip2region) - IP 地理位置库
+- [JWT 介绍](https://jwt.io/)
+- [Swagger 文档](https://swagger.io/)
 
 ## License
 
